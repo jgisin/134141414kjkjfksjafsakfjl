@@ -1,6 +1,9 @@
 require_relative './weapon.rb'
 
 class BattleBot
+
+  @@count = 0
+
   attr_reader :name, :health, :enemies, :weapon
 
   def initialize(name, health = 100, enemies=[], weapon=nil)
@@ -9,11 +12,11 @@ class BattleBot
     @enemies = enemies
     @weapon = weapon
     @dead = false
+    @@count += 1
   end
 
   def dead?
-    @health > 0 ? @dead = false : @dead = true
-      return @dead
+    @dead
   end
 
   def has_weapon?
@@ -25,13 +28,12 @@ class BattleBot
   end
 
   def pick_up(weapon)
+    raise ArgumentError if weapon.class != Weapon
+    raise ArgumentError if weapon.bot
     if @weapon == nil
-      if weapon.is_a? Weapon
-        @weapon = weapon
-        @weapon.bot = self
-      else
-        raise ArgumentError
-      end
+      @weapon = weapon
+      @weapon.bot = self
+      return @weapon
     else
       nil
     end
@@ -43,17 +45,18 @@ class BattleBot
   end
 
   def take_damage(damage)
-    if (damage.is_a? Fixnum)
+    raise ArgumentError unless damage.is_a? Fixnum
       if (@health >= damage)
         @health -= damage
+      else
+        @health = 0
+        @dead = true
+        @@count -= 1
       end
-    else
-      raise ArgumentError
-    end
   end
 
   def heal
-    if !@dead && @health <= 90
+    if @dead == false && @health <= 90
       @health += 10
 
     end
@@ -70,24 +73,27 @@ class BattleBot
   end
 
   def receive_attack_from(bot)
-    if bot.class != BattleBot
-      raise ArgumentError
-    end
+    raise ArgumentError if bot.class != BattleBot
+    raise ArgumentError if bot == self
+    raise ArgumentError unless bot.weapon
+
     unless enemies.include?(bot)
       enemies << bot
       self.defend_against(bot)
     end
-   # self.take_damage(@weapon.damage)
+    self.take_damage(bot.weapon.damage)
 
   end
 
   def defend_against(bot)
-    self.has_weapon?
-    self.dead?
+    if self.dead? == false && self.has_weapon?
+      self.attack(bot)
+    end
+
   end
 
   def self.count
-
+    @@count
   end
 
 
